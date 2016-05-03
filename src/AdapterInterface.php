@@ -2,12 +2,19 @@
 
 namespace Phwoolcon\Auth;
 
+use Phwoolcon\Model\User;
+
 interface AdapterInterface
 {
 
     public function changePassword($password, $originPassword = null);
 
     public function forgotPassword(array $credential);
+
+    /**
+     * @return User|null
+     */
+    public function getUser();
 
     public function login(array $credential);
 

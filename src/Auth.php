@@ -13,7 +13,16 @@ class Auth
      * @var Di
      */
     protected static $di;
+    /**
+     * @var AdapterInterface
+     */
     protected static $instance;
+
+    public static function getInstance()
+    {
+        static::$instance or static::$instance = static::$di->getShared('auth');
+        return static::$instance;
+    }
 
     public static function register(Di $di)
     {
