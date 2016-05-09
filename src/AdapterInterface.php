@@ -12,7 +12,7 @@ interface AdapterInterface
     public function forgotPassword(array $credential);
 
     /**
-     * @return User|null
+     * @return User|null Current logged in user
      */
     public function getUser();
 

@@ -3,7 +3,9 @@
 namespace Phwoolcon\Auth;
 
 use Phalcon\Di;
+use Phalcon\Security;
 use Phwoolcon\Auth\Adapter\Exception;
+use Phwoolcon\Auth\Adapter\Generic;
 use Phwoolcon\Config;
 use Phwoolcon\Router;
 
@@ -14,7 +16,7 @@ class Auth
      */
     protected static $di;
     /**
-     * @var AdapterInterface
+     * @var AdapterInterface|Generic
      */
     protected static $instance;
 
@@ -31,7 +33,11 @@ class Auth
             $class = Config::get('auth.adapter');
             $options = Config::get('auth.options');
             strpos($class, '\\') === false and $class = 'Phwoolcon\\Auth\\Adapter\\' . $class;
-            $adapter = new $class($options);
+            /* @var Security $hasher */
+            $hasher = static::$di->getShared('security');
+            $hasher->setDefaultHash($options['security']['default_hash']);
+            $hasher->setWorkFactor($options['security']['work_factor']);
+            $adapter = new $class($options, $hasher);
             if (!$adapter instanceof AdapterInterface) {
                 throw new Exception('Auth adapter class should implement ' . AdapterInterface::class);
             }
