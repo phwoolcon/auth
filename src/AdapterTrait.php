@@ -17,6 +17,10 @@ trait AdapterTrait
     protected $sessionKey;
     protected $userModel;
     protected $uidKey;
+    /**
+     * @var User
+     */
+    protected $user;
 
     public function __construct(array $options, $hasher)
     {
@@ -41,12 +45,15 @@ trait AdapterTrait
 
     public function getUser()
     {
+        if ($this->user !== null) {
+            return $this->user;
+        }
         if (!$uid = Session::get($this->sessionKey . '.uid')) {
-            return null;
+            return $this->user = false;
         }
         /* @var User $userModel */
         $userModel = $this->userModel;
-        return $userModel::findFirstSimple([$this->uidKey => $uid]);
+        return $this->user = $userModel::findFirstSimple([$this->uidKey => $uid]);
     }
 
     public function login(array $credential)
@@ -60,9 +67,33 @@ trait AdapterTrait
         if (!$this->hasher->checkHash($credential['password'], $user->getData($this->options['user_fields']['hash_field']))) {
             throw new Exception(__($this->options['hints']['invalid_password']));
         }
+        $this->setUserAsLoggedIn($user);
         return $user;
+    }
+
+    public function logout()
+    {
+        $this->user = null;
+        Session::destroy();
+        return $this;
     }
 
     public function register(array $credential, $role = null)
     {}
+
+    public function reset()
+    {
+        $this->user = null;
+    }
+
+    /**
+     * @param User $user
+     * @return $this
+     */
+    public function setUserAsLoggedIn($user)
+    {
+        $this->user = $user;
+        $user and Session::set($this->sessionKey . '.uid', $user->getId());
+        return $this;
+    }
 }
