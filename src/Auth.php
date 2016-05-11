@@ -26,6 +26,12 @@ class Auth
         return static::$instance;
     }
 
+    public static function getOption($key)
+    {
+        static::$instance or static::$instance = static::$di->getShared('auth');
+        return static::$instance->getOption($key);
+    }
+
     public static function register(Di $di)
     {
         static::$di = $di;

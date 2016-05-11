@@ -12,11 +12,21 @@ interface AdapterInterface
     public function forgotPassword(array $credential);
 
     /**
-     * @return User|null Current logged in user
+     * @return User|false Current logged in user
      */
     public function getUser();
 
     public function login(array $credential);
 
-    public function register(array $credential, $role = null);
+    public function logout();
+
+    /**
+     * @param array $credential
+     * @param bool  $confirmed
+     * @param mixed $role
+     * @return User
+     */
+    public function register(array $credential, $confirmed = null, $role = null);
+
+    public function setUserAsLoggedIn($user);
 }

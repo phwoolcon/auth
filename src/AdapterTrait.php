@@ -36,12 +36,24 @@ trait AdapterTrait
 
     /**
      * @param array $credential
+     * @param bool  $confirmed
+     * @return User|false
+     */
+    abstract public function createUser(array $credential, $confirmed = null);
+
+    /**
+     * @param array $credential
      * @return User|false
      */
     abstract public function findUser(array $credential);
 
     public function forgotPassword(array $credential)
     {}
+
+    public function getOption($key)
+    {
+        return fnGet($this->options, $key);
+    }
 
     public function getUser()
     {
@@ -64,7 +76,7 @@ trait AdapterTrait
         if (!$user = $this->findUser($credential)) {
             throw new Exception(__($this->options['hints']['invalid_user_credential']));
         }
-        if (!$this->hasher->checkHash($credential['password'], $user->getData($this->options['user_fields']['hash_field']))) {
+        if (!$this->hasher->checkHash($credential['password'], $user->getData($this->options['user_fields']['password_field']))) {
             throw new Exception(__($this->options['hints']['invalid_password']));
         }
         $this->setUserAsLoggedIn($user);
@@ -74,12 +86,24 @@ trait AdapterTrait
     public function logout()
     {
         $this->user = null;
-        Session::destroy();
+        Session::clear();
         return $this;
     }
 
-    public function register(array $credential, $role = null)
-    {}
+    public function register(array $credential, $confirmed = null, $role = null)
+    {
+        if (empty($credential['login']) || empty($credential['password'])) {
+            throw new Exception(__($this->options['hints']['invalid_user_credential']));
+        }
+        if ($this->findUser($credential)) {
+            throw new Exception(__($this->options['hints']['user_credential_registered']));
+        }
+        $user = $this->createUser($credential, $confirmed);
+        if ($user->getData('confirmed')) {
+            $this->setUserAsLoggedIn($user);
+        }
+        return $user;
+    }
 
     public function reset()
     {
