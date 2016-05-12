@@ -32,6 +32,15 @@ class Auth
         return static::$instance->getOption($key);
     }
 
+    /**
+     * @return false|\Phwoolcon\Model\User
+     */
+    public static function getUser()
+    {
+        static::$instance or static::$instance = static::$di->getShared('auth');
+        return static::$instance->getUser();
+    }
+
     public static function register(Di $di)
     {
         static::$di = $di;
