@@ -35,10 +35,12 @@ trait AdapterTrait
 
     public function activatePendingConfirmationUser($confirmationCode)
     {
+        /* @var User $userModel */
+        $userModel = $this->userModel;
         if (!($userData = $this->getPendingConfirmationData()) ||
             !($uid = fnGet($userData, $this->uidKey)) ||
             ($confirmationCode != fnGet($userData, 'confirmation_code')) ||
-            User::findFirstSimple([$this->uidKey => $uid])
+            $userModel::findFirstSimple([$this->uidKey => $uid])
         ) {
             return false;
         }
