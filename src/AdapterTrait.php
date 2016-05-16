@@ -4,6 +4,8 @@ namespace Phwoolcon\Auth;
 
 use Phalcon\Security;
 use Phwoolcon\Auth\Adapter\Exception;
+use Phwoolcon\Cache;
+use Phwoolcon\Log;
 use Phwoolcon\Model\User;
 use Phwoolcon\Session;
 
@@ -31,8 +33,40 @@ trait AdapterTrait
         $this->uidKey = $options['uid_key'];
     }
 
+    public function activatePendingConfirmationUser($confirmationCode)
+    {
+        if (!($userData = $this->getPendingConfirmationData()) ||
+            !($uid = fnGet($userData, $this->uidKey)) ||
+            ($confirmationCode != fnGet($userData, 'confirmation_code')) ||
+            User::findFirstSimple([$this->uidKey => $uid])
+        ) {
+            return false;
+        }
+        /* @var User $user */
+        $user = new $this->userModel;
+        $user->setData($userData)
+            ->setData('confirmed', true);
+        if (!$user->save()) {
+            Log::error('User activation failed on save: ' . var_export($user->getStringMessages(), true));
+            return false;
+        }
+        $this->removePendingConfirmationData();
+        $this->setUserAsLoggedIn($user);
+        return $user;
+    }
+
     public function changePassword($password, $originPassword = null)
     {}
+
+    protected function checkRegisterCredential(array $credential)
+    {
+        if (empty($credential['login']) || empty($credential['password'])) {
+            throw new Exception(__($this->options['hints']['invalid_user_credential']));
+        }
+        if ($this->findUser($credential)) {
+            throw new Exception(__($this->options['hints']['user_credential_registered']));
+        }
+    }
 
     /**
      * @param array $credential
@@ -53,6 +87,11 @@ trait AdapterTrait
     public function getOption($key)
     {
         return fnGet($this->options, $key);
+    }
+
+    public function getPendingConfirmationData()
+    {
+        return ($key = Session::get('pending-confirm')) ? Cache::get('reg-pc-' . $key) : null;
     }
 
     public function getUser()
@@ -90,19 +129,35 @@ trait AdapterTrait
         return $this;
     }
 
+    /**
+     * @param User  $user
+     * @param array $credential
+     * @return $this
+     */
+    public function pushPendingConfirmation($user, array $credential)
+    {
+        $user->setData('login', $login = $credential['login']);
+        $data = $user->getData();
+        Session::set('pending-confirm', $key = md5($login));
+        Cache::set('reg-pc-' . $key, $data, $this->options['register']['confirmation_code_ttl']);
+        return $this;
+    }
+
     public function register(array $credential, $confirmed = null, $role = null)
     {
-        if (empty($credential['login']) || empty($credential['password'])) {
-            throw new Exception(__($this->options['hints']['invalid_user_credential']));
-        }
-        if ($this->findUser($credential)) {
-            throw new Exception(__($this->options['hints']['user_credential_registered']));
-        }
+        $this->checkRegisterCredential($credential);
         $user = $this->createUser($credential, $confirmed);
         if ($user->getData('confirmed')) {
             $this->setUserAsLoggedIn($user);
         }
         return $user;
+    }
+
+    public function removePendingConfirmationData()
+    {
+        Cache::delete('reg-pc-' . Session::get('pending-confirm'));
+        Session::remove('pending-confirm');
+        return $this;
     }
 
     public function reset()
