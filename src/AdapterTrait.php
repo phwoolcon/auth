@@ -100,7 +100,7 @@ trait AdapterTrait
 
     public function getRememberTokenFromCookie()
     {
-        return Cookies::get($this->options['remember_login']['key'])->useEncryption(false)->getValue();
+        return Cookies::get($this->options['remember_login']['cookie_key'])->useEncryption(false)->getValue();
     }
 
     public function getUser()
@@ -146,7 +146,7 @@ trait AdapterTrait
         if (!empty($credential['remember']) && method_exists($user, 'setRememberToken')) {
             $rememberToken = Text::token() . $user->getId();
             $user->setRememberToken($rememberToken);
-            Cookies::set($cookieName = $this->options['remember_login']['key'], $rememberToken,
+            Cookies::set($cookieName = $this->options['remember_login']['cookie_key'], $rememberToken,
                 time() + $this->options['remember_login']['ttl'], null, null, null, true
             );
             Cookies::get($cookieName)->useEncryption(false);
@@ -160,7 +160,7 @@ trait AdapterTrait
         if ($this->getUser() && method_exists($this->user, 'removeRememberToken')) {
             $this->user->removeRememberToken();
         }
-        Cookies::set($cookieName = $this->options['remember_login']['key'], '', null, null, null, null, true);
+        Cookies::set($cookieName = $this->options['remember_login']['cookie_key'], '', null, null, null, null, true);
         Cookies::get($cookieName)->useEncryption(false);
         $this->user = null;
         Session::clear();
