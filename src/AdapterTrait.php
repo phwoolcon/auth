@@ -106,7 +106,10 @@ trait AdapterTrait
         }
         /* @var User $userModel */
         $userModel = $this->userModel;
-        return $this->user = $userModel::findFirstSimple([$this->uidKey => $uid]);
+        if (!$this->user = $userModel::findFirstSimple([$this->uidKey => $uid])) {
+            Session::clear();
+        }
+        return $this->user;
     }
 
     public function login(array $credential)
