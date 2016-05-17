@@ -6,6 +6,7 @@ use Phwoolcon\Auth\AdapterInterface;
 use Phwoolcon\Auth\AdapterTrait;
 use Phwoolcon\I18n;
 use Phwoolcon\Model\User;
+use Phwoolcon\Text;
 
 class Generic implements AdapterInterface
 {
@@ -18,7 +19,7 @@ class Generic implements AdapterInterface
         if ($email = filter_var($login = $credential['login'], FILTER_VALIDATE_EMAIL)) {
             $user->setData('email', $email);
             $confirmed === null and $confirmed = !$this->options['register']['confirm_email'];
-            $confirmed or $user->setData('confirmation_code', bin2hex(openssl_random_pseudo_bytes(16)));
+            $confirmed or $user->setData('confirmation_code', Text::token());
         } elseif (I18n::checkMobile($login)) {
             $user->setData('mobile', $login);
             $confirmed === null and $confirmed = !$this->options['register']['confirm_mobile'];

@@ -5,9 +5,11 @@ namespace Phwoolcon\Auth;
 use Phalcon\Security;
 use Phwoolcon\Auth\Adapter\Exception;
 use Phwoolcon\Cache;
+use Phwoolcon\Cookies;
 use Phwoolcon\Log;
 use Phwoolcon\Model\User;
 use Phwoolcon\Session;
+use Phwoolcon\Text;
 
 trait AdapterTrait
 {
@@ -96,18 +98,36 @@ trait AdapterTrait
         return ($key = Session::get('pending-confirm')) ? Cache::get('reg-pc-' . $key) : null;
     }
 
+    public function getRememberTokenFromCookie()
+    {
+        return Cookies::get($this->options['remember_login']['key'])->useEncryption(false)->getValue();
+    }
+
     public function getUser()
     {
         if ($this->user !== null) {
             return $this->user;
         }
+        $rememberToken = false;
         if (!$uid = Session::get($this->sessionKey . '.uid')) {
-            return $this->user = false;
+            if ($rememberToken = $this->getRememberTokenFromCookie()) {
+                $uid = substr($rememberToken, 32);
+            } else {
+                return $this->user = false;
+            }
         }
         /* @var User $userModel */
         $userModel = $this->userModel;
         if (!$this->user = $userModel::findFirstSimple([$this->uidKey => $uid])) {
             Session::clear();
+        }
+        if ($this->user && $rememberToken) {
+            if (!method_exists($this->user, 'getRememberToken') || $this->user->getRememberToken() != $rememberToken) {
+                $this->user = null;
+                Session::clear();
+            } else {
+                $this->setUserAsLoggedIn($this->user);
+            }
         }
         return $this->user;
     }
@@ -123,12 +143,25 @@ trait AdapterTrait
         if (!$this->hasher->checkHash($credential['password'], $user->getData($this->options['user_fields']['password_field']))) {
             throw new Exception(__($this->options['hints']['invalid_password']));
         }
+        if (!empty($credential['remember']) && method_exists($user, 'setRememberToken')) {
+            $rememberToken = Text::token() . $user->getId();
+            $user->setRememberToken($rememberToken);
+            Cookies::set($cookieName = $this->options['remember_login']['key'], $rememberToken,
+                time() + $this->options['remember_login']['ttl'], null, null, null, true
+            );
+            Cookies::get($cookieName)->useEncryption(false);
+        }
         $this->setUserAsLoggedIn($user);
         return $user;
     }
 
     public function logout()
     {
+        if ($this->getUser() && method_exists($this->user, 'removeRememberToken')) {
+            $this->user->removeRememberToken();
+        }
+        Cookies::set($cookieName = $this->options['remember_login']['key'], '', null, null, null, null, true);
+        Cookies::get($cookieName)->useEncryption(false);
         $this->user = null;
         Session::clear();
         return $this;
