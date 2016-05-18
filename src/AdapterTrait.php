@@ -174,7 +174,8 @@ trait AdapterTrait
      */
     public function pushPendingConfirmation($user, array $credential)
     {
-        $user->setData('login', $login = $credential['login']);
+        $user->setData('login', $login = $credential['login'])
+            ->setData('confirm_class', get_called_class());
         $data = $user->getData();
         Session::set('pending-confirm', $key = md5($login));
         Cache::set('reg-pc-' . $key, $data, $this->options['register']['confirmation_code_ttl']);

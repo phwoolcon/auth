@@ -19,11 +19,13 @@ class Generic implements AdapterInterface
         if ($email = filter_var($login = $credential['login'], FILTER_VALIDATE_EMAIL)) {
             $user->setData('email', $email);
             $confirmed === null and $confirmed = !$this->options['register']['confirm_email'];
-            $confirmed or $user->setData('confirmation_code', Text::token());
+            $confirmed or $user->setData('confirmation_code', Text::token())
+                ->setData('confirm_method', 'sendConfirmationEmail');
         } elseif (I18n::checkMobile($login)) {
             $user->setData('mobile', $login);
             $confirmed === null and $confirmed = !$this->options['register']['confirm_mobile'];
-            $confirmed or $user->setData('confirmation_code', mt_rand(100000, 999999));
+            $confirmed or $user->setData('confirmation_code', mt_rand(100000, 999999))
+                ->setData('confirm_method', 'sendConfirmationSms');
         } else {
             throw new Exception(__($this->options['hints']['invalid_user_credential']));
         }
@@ -51,4 +53,10 @@ class Generic implements AdapterInterface
         }
         return false;
     }
+
+    public static function sendConfirmationEmail($userData)
+    {}
+
+    public static function sendConfirmationSms($userData)
+    {}
 }
