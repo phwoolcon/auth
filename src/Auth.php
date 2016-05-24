@@ -64,7 +64,7 @@ class Auth
         is_array($routes) and static::registerRoutes($routes);
         Events::attach('view:generatePhwoolconJsOptions', function (Event $event) {
             $options = $event->getData() ?: [];
-            $options['is_sso_server'] = true;
+            $options['isSsoServer'] = true;
             $event->setData($options);
             return $options;
         });
