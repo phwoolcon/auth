@@ -3,10 +3,12 @@
 namespace Phwoolcon\Auth;
 
 use Phalcon\Di;
+use Phalcon\Events\Event;
 use Phalcon\Security;
 use Phwoolcon\Auth\Adapter\Exception;
 use Phwoolcon\Auth\Adapter\Generic;
 use Phwoolcon\Config;
+use Phwoolcon\Events;
 use Phwoolcon\Router;
 
 class Auth
@@ -60,6 +62,12 @@ class Auth
         });
         $routes = Config::get('auth.routes');
         is_array($routes) and static::registerRoutes($routes);
+        Events::attach('view:generatePhwoolconJsOptions', function (Event $event) {
+            $options = $event->getData() ?: [];
+            $options['is_sso_server'] = true;
+            $event->setData($options);
+            return $options;
+        });
     }
 
     public static function registerRoutes(array $routes = [])
