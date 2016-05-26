@@ -17,10 +17,22 @@ class Auth
      * @var Di
      */
     protected static $di;
+    protected static $config = [];
     /**
      * @var AdapterInterface|Generic
      */
     protected static $instance;
+
+    protected static function addPhwoolconJsOptions()
+    {
+        Events::attach('view:generatePhwoolconJsOptions', function (Event $event) {
+            $config = static::$config;
+            $options = $event->getData() ?: [];
+            $options['isSsoServer'] = true;
+            $event->setData($options = array_merge($options, $config['phwoolcon_js_options']));
+            return $options;
+        });
+    }
 
     public static function getInstance()
     {
@@ -46,9 +58,11 @@ class Auth
     public static function register(Di $di)
     {
         static::$di = $di;
+        static::$config = Config::get('auth');
         $di->setShared('auth', function () {
-            $class = Config::get('auth.adapter');
-            $options = Config::get('auth.options');
+            $config = static::$config;
+            $class = $config['adapter'];
+            $options = $config['options'];
             strpos($class, '\\') === false and $class = 'Phwoolcon\\Auth\\Adapter\\' . $class;
             /* @var Security $hasher */
             $hasher = static::$di->getShared('security');
@@ -60,20 +74,6 @@ class Auth
             }
             return $adapter;
         });
-        $routes = Config::get('auth.routes');
-        is_array($routes) and static::registerRoutes($routes);
-        Events::attach('view:generatePhwoolconJsOptions', function (Event $event) {
-            $options = $event->getData() ?: [];
-            $options['isSsoServer'] = true;
-            $event->setData($options);
-            return $options;
-        });
-    }
-
-    public static function registerRoutes(array $routes = [])
-    {
-        /* @var Router $router */
-        $router = static::$di->getShared('router');
-        $router->addRoutes($routes);
+        static::addPhwoolconJsOptions();
     }
 }
