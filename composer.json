@@ -19,9 +19,6 @@
         "psr-4": {"Phwoolcon\\Auth\\": "src"}
     },
     "bin": [
-        "phwoolcon-package/auth.php"
-    ],
-    "config": {
-        "bin-dir": "vendor/bin/phwoolcon-packages"
-    }
+        "phwoolcon-package/phwoolcon-package-auth.php"
+    ]
 }
