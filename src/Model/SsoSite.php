@@ -10,7 +10,7 @@ class SsoSite extends Model
     protected $_table = 'sso_sites';
     protected $_useDistributedId = false;
 
-    public static function getSites()
+    public static function getSitesData()
     {
         if ((null === static::$_sites) && null === (static::$_sites = Cache::get($cacheKey = 'sso.sites'))) {
             /* @var static $site */
@@ -28,9 +28,9 @@ class SsoSite extends Model
         return static::$_sites;
     }
 
-    public static function getSiteByReturnUrl($returnUrl)
+    public static function getSiteDataByReturnUrl($returnUrl)
     {
-        $sites = static::getSites();
+        $sites = static::getSitesData();
         $host = parse_url($returnUrl, PHP_URL_HOST);
         return isset($sites[$host]) ? $sites[$host] : null;
     }
