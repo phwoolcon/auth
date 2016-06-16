@@ -1,5 +1,7 @@
 <?php
 return [
-    'config' => 'auth.php',
-    'assets' => 'phwoolcon-auth',
+    'phwoolcon/auth' => [
+        'config' => 'auth.php',
+        'assets' => 'phwoolcon-auth',
+    ],
 ];
