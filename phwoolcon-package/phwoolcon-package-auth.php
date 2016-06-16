@@ -2,6 +2,9 @@
 return [
     'phwoolcon/auth' => [
         'config' => 'auth.php',
-        'assets' => 'phwoolcon-auth',
+        'assets' => [
+            'phwoolcon-auth/sso.js',
+            'phwoolcon-auth/sso.min.js',
+        ],
     ],
 ];
