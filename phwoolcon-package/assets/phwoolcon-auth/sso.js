@@ -1,4 +1,4 @@
-/*! phwoolcon v1.0-dev | Apache-2.0 */
+/*! phwoolcon sso.js v1.0-dev https://github.com/phwoolcon/auth | Apache-2.0 */
 /* SSO api */
 !function (w, d) {
     w.$p || (w.$p = {
@@ -10,7 +10,7 @@
     });
 
     var $ = w.jQuery;
-    var initialized, iframe, clientWindow, serverWindow, msgTargetOrigin, timerServerCheck;
+    var initialized, body, cIframe, sIframe, clientWindow, serverWindow, notifyForm, msgTargetOrigin, timerServerCheck;
     var options = {
             ssoServer: $p.options.baseUrl,
             ssoCheckUri: $p.options.ssoCheckUri,
@@ -19,7 +19,7 @@
             initTime: 0,
             notifyUrl: "",
             debug: false
-        },
+        }, ssoClientNotifyIframeName = "_sso_client_iframe_" + (+new Date),
         vars = {};
     var simpleStorage = w.simpleStorage || {
             get: function (key) {
@@ -37,6 +37,7 @@
                 return;
             }
             initialized = true;
+            body = d.getElementsByTagName("body")[0];
             if ($p.options.isSsoServer) {
                 msgTargetOrigin = d.referrer;
                 _listen(w, "message", function (e) {
@@ -47,6 +48,24 @@
                 _listen(w, "message", function (e) {
                     _clientOnMessage.apply(sso, [e]);
                 });
+                cIframe = d.createElement("iframe");
+                cIframe.width = cIframe.height = cIframe.frameBorder = 0;
+                cIframe.style.display = "none";
+                cIframe.name = ssoClientNotifyIframeName;
+                cIframe.src = "";
+                body.appendChild(cIframe);
+
+                var notifyField = d.createElement("input");
+                notifyField.type = "hidden";
+                notifyField.name = "sso_user_data";
+                notifyForm = d.createElement("form");
+                notifyForm.action = options.notifyUrl;
+                notifyForm.style.display = "none";
+                notifyForm.method = "POST";
+                notifyForm.target = ssoClientNotifyIframeName;
+                notifyForm.appendChild(notifyField);
+                notifyForm.notifyField = notifyField;
+                body.appendChild(notifyForm);
             }
         },
         setOptions: function (ssoOptions) {
@@ -71,18 +90,18 @@
                         notifyUrl: options.notifyUrl
                     }
                 };
-            if (iframe) {
+            if (sIframe) {
                 return serverWindow && _sendMsgTo(serverWindow, message);
             }
-            iframe = d.createElement("iframe");
-            iframe.src = options.ssoServer + options.ssoCheckUri;
-            iframe.width = iframe.height = iframe.frameBorder = 0;
-            iframe.style.display = "none";
-            _listen(iframe, "load", function () {
-                serverWindow = iframe.contentWindow;
+            sIframe = d.createElement("iframe");
+            sIframe.src = options.ssoServer + options.ssoCheckUri;
+            sIframe.width = sIframe.height = sIframe.frameBorder = 0;
+            sIframe.style.display = "none";
+            _listen(sIframe, "load", function () {
+                serverWindow = sIframe.contentWindow;
                 _sendMsgTo(serverWindow, message);
             });
-            d.getElementsByTagName("body")[0].appendChild(iframe);
+            body.appendChild(sIframe);
         },
         stopCheck: function () {
             _sendMsgTo(serverWindow, {stopCheck: true});
@@ -99,13 +118,17 @@
     function _clientLogin(loginData) {
         _debug("Client login");
         _debug(loginData);
-        // TODO Invoke client notify url to finish login
+        notifyForm.notifyField.value = loginData;
+        notifyForm.submit();
+        _debug("App notification sent");
     }
 
     function _clientLogout() {
         vars.clientUid && _debug("Client logout");
-        // TODO Invoke client notify url to finish logout
         sso.setUid(null);
+        notifyForm.notifyField.value = "";
+        notifyForm.submit();
+        _debug("App notification sent");
     }
 
     function _clientOnMessage(e) {
@@ -123,7 +146,7 @@
     }
 
     function _debug(info) {
-        w.console && options.debug && w.console.log(info);
+        w.console && options.debug && (w.console.trace ? w.console.trace(info) : w.console.log(info));
     }
 
     function _getJson(data) {
@@ -154,8 +177,7 @@
 
     function _serverCheck() {
         var clientUid = vars.clientUid,
-            serverUid = sso.getUid(),
-            loginData;
+            serverUid = sso.getUid();
         clientWindow = w.parent;
         timerServerCheck = setTimeout(function () {
             _serverCheck.apply(sso);
@@ -174,8 +196,8 @@
             }, function (data) {
                 vars.clientUid = serverUid;
                 _debug(data);
-                _sendMsgTo(clientWindow, {login: loginData});
-            }, 'json');
+                _sendMsgTo(clientWindow, {login: data["user_data"]});
+            }, "json");
             _sendMsgTo(clientWindow, {setUid: serverUid});
         } else {
             // Logout

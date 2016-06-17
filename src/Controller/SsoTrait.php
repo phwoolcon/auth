@@ -23,9 +23,10 @@ trait SsoTrait
     {
         $site = $ssoData['site'];
         unset($ssoData['user'], $ssoData['site']);
+        $userData = $ssoData['user_data'];
         $key = fnGet($site, 'site_secret');
-        $ssoData['user_data'] = Crypt::opensslEncrypt(json_encode($ssoData['user_data']), $key);
-        $ssoData['sign'] = Security::signArrayHmacSha256($ssoData, $key);
+        $userData['sign'] = Security::signArrayHmacSha256($userData, $key);
+        $ssoData['user_data'] = Crypt::opensslEncrypt(json_encode($userData), $key);
         return $ssoData;
     }
 
