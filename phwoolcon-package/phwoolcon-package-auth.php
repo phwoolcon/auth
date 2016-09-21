@@ -7,7 +7,9 @@ return [
             10 => 'di.php',
         ],
         'class_aliases' => [
-            'Auth' => 'Phwoolcon\Auth\Auth',
+            10 => [
+                'Auth' => 'Phwoolcon\Auth\Auth',
+            ],
         ],
     ],
 ];
