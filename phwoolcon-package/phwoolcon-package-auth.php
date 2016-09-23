@@ -1,7 +1,6 @@
 <?php
 return [
     'phwoolcon/auth' => [
-        'assets' => 'phwoolcon-auth',
         'di' => [
             10 => 'di.php',
         ],
