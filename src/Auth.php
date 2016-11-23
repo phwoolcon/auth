@@ -9,7 +9,6 @@ use Phwoolcon\Auth\Adapter\Exception;
 use Phwoolcon\Auth\Adapter\Generic;
 use Phwoolcon\Config;
 use Phwoolcon\Events;
-use Phwoolcon\Router;
 
 class Auth
 {
@@ -60,15 +59,22 @@ class Auth
         static::$di = $di;
         static::$config = Config::get('auth');
         $di->setShared('auth', function () {
+            $di = static::$di;
             $config = static::$config;
             $class = $config['adapter'];
             $options = $config['options'];
             strpos($class, '\\') === false and $class = 'Phwoolcon\\Auth\\Adapter\\' . $class;
+            if ($di->has($class)) {
+                $class = $di->getRaw($class);
+            }
+            if (!class_exists($class)) {
+                throw new Exception('Admin auth adapter class should implement ' . AdapterInterface::class);
+            }
             /* @var Security $hasher */
             $hasher = static::$di->getShared('security');
             $hasher->setDefaultHash($options['security']['default_hash']);
             $hasher->setWorkFactor($options['security']['work_factor']);
-            $adapter = new $class($options, $hasher);
+            $adapter = new $class($options, $hasher, $di);
             if (!$adapter instanceof AdapterInterface) {
                 throw new Exception('Auth adapter class should implement ' . AdapterInterface::class);
             }

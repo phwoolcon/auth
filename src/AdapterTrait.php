@@ -2,6 +2,7 @@
 
 namespace Phwoolcon\Auth;
 
+use Phalcon\Di;
 use Phalcon\Security;
 use Phwoolcon\Auth\Adapter\Exception;
 use Phwoolcon\Cache;
@@ -13,6 +14,10 @@ use Phwoolcon\Text;
 
 trait AdapterTrait
 {
+    /**
+     * @var Di
+     */
+    protected $di;
     /**
      * @var Security
      */
@@ -26,13 +31,14 @@ trait AdapterTrait
      */
     protected $user;
 
-    public function __construct(array $options, $hasher)
+    public function __construct(array $options, $hasher, Di $di)
     {
         $this->hasher = $hasher;
         $this->options = $options;
         $this->sessionKey = $options['session_key'];
-        $this->userModel = $options['user_model'];
         $this->uidKey = $options['uid_key'];
+        $this->di = $di;
+        $this->setUserModel($options['user_model']);
     }
 
     public function activatePendingConfirmationUser($confirmationCode)
@@ -103,6 +109,9 @@ trait AdapterTrait
         return Cookies::get($this->options['remember_login']['cookie_key'])->useEncryption(false)->getValue();
     }
 
+    /**
+     * @return User|false Current logged in user
+     */
     public function getUser()
     {
         if ($this->user !== null) {
@@ -202,6 +211,17 @@ trait AdapterTrait
     public function reset()
     {
         $this->user = null;
+    }
+
+    public function setDi(Di $di)
+    {
+        $this->di = $di;
+    }
+
+    public function setUserModel($class)
+    {
+        $this->userModel = $this->di->has($class) ? $this->di->getRaw($class) : $class;
+        return $this;
     }
 
     /**

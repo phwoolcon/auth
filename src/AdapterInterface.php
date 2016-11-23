@@ -2,6 +2,7 @@
 
 namespace Phwoolcon\Auth;
 
+use Phalcon\Di;
 use Phwoolcon\Model\User;
 
 interface AdapterInterface
@@ -27,6 +28,8 @@ interface AdapterInterface
      * @return User
      */
     public function register(array $credential, $confirmed = null, $role = null);
+
+    public function setDi(Di $di);
 
     public function setUserAsLoggedIn($user);
 }
