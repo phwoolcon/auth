@@ -18,9 +18,6 @@
     "autoload": {
         "psr-4": {"Phwoolcon\\Auth\\": "src"}
     },
-    "bin": [
-        "phwoolcon-package/phwoolcon-package-auth.php"
-    ],
     "extra": {
         "branch-alias": {
             "dev-master": "1.0.x-dev"
