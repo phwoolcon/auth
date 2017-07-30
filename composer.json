@@ -12,8 +12,7 @@
     ],
     "minimum-stability": "dev",
     "require": {
-        "php": ">=5.5.0",
-        "phwoolcon/phwoolcon": "dev-master"
+        "phwoolcon/phwoolcon": "~1.0"
     },
     "autoload": {
         "psr-4": {"Phwoolcon\\Auth\\": "src"}
