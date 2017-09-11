@@ -9,7 +9,6 @@
         }
     });
 
-    var $ = w.jQuery;
     var initialized, body, cIframe, sIframe, clientWindow, serverWindow, notifyForm, msgTargetOrigin, timerServerCheck;
     var options = {
             ssoServer: $p.options.baseUrl,
@@ -22,13 +21,13 @@
         }, ssoClientNotifyIframeName = "_sso_client_iframe_" + (+new Date),
         vars = {};
     var simpleStorage = w.simpleStorage || {
-            get: function (key) {
-                return w.localStorage ? _getJson(w.localStorage.getItem("_sso_" + key)) : false;
-            },
-            set: function (key, value) {
-                return w.localStorage ? w.localStorage.setItem("_sso_" + key, _jsonStringify(value)) : false;
-            }
-        };
+        get: function (key) {
+            return w.localStorage ? _getJson(w.localStorage.getItem("_sso_" + key)) : false;
+        },
+        set: function (key, value) {
+            return w.localStorage ? w.localStorage.setItem("_sso_" + key, _jsonStringify(value)) : false;
+        }
+    };
     var sso = w.$p.sso = {
         options: options,
         init: function (ssoOptions) {
@@ -189,15 +188,31 @@
         if (serverUid) {
             // Login
             _debug("Login: " + serverUid);
-            $.post(options.ssoServer + options.ssoServerCheckUri, {
-                notifyUrl: options.notifyUrl,
-                initTime: options.initTime,
-                initToken: options.initToken
-            }, function (data) {
+            fetch(options.ssoServer + options.ssoServerCheckUri, {
+                method: "POST",
+                body: $p.jsonToFormData({
+                    notifyUrl: options.notifyUrl,
+                    initTime: options.initTime,
+                    initToken: options.initToken
+                })
+            }).then(function checkStatus(response) {
+                if (response.status >= 200 && response.status < 300) {
+                    return response
+                } else {
+                    var error = new Error(response.statusText);
+                    error.response = response;
+                    throw error;
+                }
+            }).then(function parseJSON(response) {
+                return response.json()
+            }).then(function (data) {
                 vars.clientUid = serverUid;
                 _debug(data);
                 _sendMsgTo(clientWindow, {login: data["user_data"]});
-            }, "json");
+            }).catch(function (error) {
+                _debug('Request failed:');
+                _debug(error);
+            });
             _sendMsgTo(clientWindow, {setUid: serverUid});
         } else {
             // Logout
