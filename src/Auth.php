@@ -46,7 +46,7 @@ class Auth
     }
 
     /**
-     * @return false|\Phwoolcon\Model\User
+     * @return false|\User
      */
     public static function getUser()
     {
