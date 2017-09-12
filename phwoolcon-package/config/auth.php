@@ -29,7 +29,6 @@ return [
             'confirm_email' => false,
             'confirmation_code_ttl' => 604800,
         ],
-        'redirect_timeout' => 2,
     ],
     'phwoolcon_js_options' => [
         'ssoCheckUri' => 'sso/check',
