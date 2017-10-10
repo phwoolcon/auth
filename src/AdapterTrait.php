@@ -152,6 +152,9 @@ trait AdapterTrait
         if (!$this->hasher->checkHash($credential['password'], $user->getData($this->options['user_fields']['password_field']))) {
             throw new Exception(__($this->options['hints']['invalid_password']));
         }
+        if (method_exists($user, 'checkStatus')) {
+            $user->checkStatus();
+        }
         if (!empty($credential['remember']) && method_exists($user, 'setRememberToken')) {
             $rememberToken = Text::token() . $user->getId();
             $user->setRememberToken($rememberToken);
