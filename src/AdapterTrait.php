@@ -99,9 +99,9 @@ trait AdapterTrait
         return fnGet($this->options, $key);
     }
 
-    public function getPendingConfirmationData()
+    public function getPendingConfirmationData($key = null)
     {
-        return ($key = Session::get('pending-confirm')) ? Cache::get('reg-pc-' . $key) : null;
+        return ($key || $key = Session::get('pending-confirm')) ? Cache::get('reg-pc-' . $key) : null;
     }
 
     public function getRememberTokenFromCookie()
