@@ -204,9 +204,10 @@ trait AdapterTrait
         return $user;
     }
 
-    public function removePendingConfirmationData()
+    public function removePendingConfirmationData($key = null)
     {
-        Cache::delete('reg-pc-' . Session::get('pending-confirm'));
+        $key or $key = Session::get('pending-confirm');
+        Cache::delete('reg-pc-' . $key);
         Session::remove('pending-confirm');
         return $this;
     }
