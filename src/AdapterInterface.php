@@ -10,6 +10,10 @@ interface AdapterInterface
 
     public function changePassword($password, $originPassword = null);
 
+    /**
+     * @param array $credential structure like ['login' => $email] or ['login'=> $mobile]
+     * @return string The credential type
+     */
     public function forgotPassword(array $credential);
 
     /**
