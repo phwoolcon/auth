@@ -12,7 +12,8 @@ interface AdapterInterface
 
     /**
      * @param array $credential structure like ['login' => $email] or ['login'=> $mobile]
-     * @return string The credential type
+     * @return string Return the credential type on success
+     * @throws \Exception Throw exception on error
      */
     public function forgotPassword(array $credential);
 
