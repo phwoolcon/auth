@@ -66,15 +66,22 @@ trait AdapterTrait
     }
 
     public function changePassword($password, $originPassword = null)
-    {}
+    {
+    }
 
     protected function checkRegisterCredential(array $credential)
     {
         if (empty($credential['login']) || empty($credential['password'])) {
-            throw new Exception(__($this->options['hints']['invalid_user_credential']));
+            throw new Exception(
+                __($this->options['hints']['invalid_user_credential']),
+                Exception::CODE_INVALID_USER_CREDENTIAL
+            );
         }
         if ($this->findUser($credential)) {
-            throw new Exception(__($this->options['hints']['user_credential_registered']));
+            throw new Exception(
+                __($this->options['hints']['user_credential_registered']),
+                Exception::CODE_USER_CREDENTIAL_REGISTERED
+            );
         }
     }
 
@@ -92,7 +99,8 @@ trait AdapterTrait
     abstract public function findUser(array $credential);
 
     public function forgotPassword(array $credential)
-    {}
+    {
+    }
 
     public function getOption($key)
     {
@@ -144,13 +152,23 @@ trait AdapterTrait
     public function login(array $credential)
     {
         if (empty($credential['login']) || empty($credential['password'])) {
-            throw new Exception(__($this->options['hints']['invalid_user_credential']));
+            throw new Exception(
+                __($this->options['hints']['invalid_user_credential']),
+                Exception::CODE_INVALID_USER_CREDENTIAL
+            );
         }
         if (!$user = $this->findUser($credential)) {
-            throw new Exception(__($this->options['hints']['invalid_user_credential']));
+            throw new Exception(
+                __($this->options['hints']['invalid_user_credential']),
+                Exception::CODE_INVALID_USER_CREDENTIAL
+            );
         }
-        if (!$this->hasher->checkHash($credential['password'], $user->getData($this->options['user_fields']['password_field']))) {
-            throw new Exception(__($this->options['hints']['invalid_password']));
+        if (!$this->hasher->checkHash($credential['password'],
+            $user->getData($this->options['user_fields']['password_field']))) {
+            throw new Exception(
+                __($this->options['hints']['invalid_password']),
+                Exception::CODE_INVALID_PASSWORD
+            );
         }
         if (method_exists($user, 'checkStatus')) {
             $user->checkStatus();
@@ -237,5 +255,29 @@ trait AdapterTrait
         $this->user = $user;
         $user and Session::set($this->sessionKey . '.uid', $user->getId());
         return $this;
+    }
+
+    /**
+     * @param $token
+     * @return User
+     * @throws Exception
+     */
+    public function verifyResetPasswordToken($token)
+    {
+        list($id) = explode('-', $token, 2);
+        /* @var User $userModel */
+        $userModel = $this->userModel;
+        if (!$user = $userModel::findFirstSimple(['id' => $id])) {
+            throw new Exception('User not found', Exception::CODE_USER_NOT_FOUND);
+        }
+        $profile = $user->getUserProfile();
+        if ($token != $profile->getResetPasswordToken()) {
+            throw new Exception('Bad reset password token', Exception::CODE_RESET_PASSWORD_TOKEN_NOT_MATCH);
+        }
+        $ttl = $this->options['reset_password']['token_ttl'];
+        if (time() > $profile->getResetPasswordTokenCreatedAt() + $ttl) {
+            throw new Exception('Reset password token outdated', Exception::CODE_RESET_PASSWORD_TOKEN_OUTDATED);
+        }
+        return $user;
     }
 }

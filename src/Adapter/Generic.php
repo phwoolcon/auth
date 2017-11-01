@@ -27,14 +27,21 @@ class Generic implements AdapterInterface
             $confirmed or $user->setData('confirmation_code', mt_rand(100000, 999999))
                 ->setData('confirm_method', 'sendConfirmationSms');
         } else {
-            throw new Exception(__($this->options['hints']['invalid_user_credential']));
+            throw new Exception(
+                __($this->options['hints']['invalid_user_credential']),
+                Exception::CODE_INVALID_USER_CREDENTIAL
+            );
         }
         $user->setData('password', $this->hasher->hash($credential['password']))
             ->setData('confirmed', $confirmed)
             ->generateDistributedId();
         if ($confirmed) {
             if (!$user->save()) {
-                throw new Exception(__($this->options['hints']['unable_to_save_user']), 0, $user->getStringMessages());
+                throw new Exception(
+                    __($this->options['hints']['unable_to_save_user']),
+                    Exception::CODE_UNABLE_TO_SAVE_USER,
+                    $user->getStringMessages()
+                );
             }
         } else {
             $this->pushPendingConfirmation($user, $credential);
@@ -55,8 +62,10 @@ class Generic implements AdapterInterface
     }
 
     public static function sendConfirmationEmail($userData)
-    {}
+    {
+    }
 
     public static function sendConfirmationSms($userData)
-    {}
+    {
+    }
 }

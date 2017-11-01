@@ -5,10 +5,10 @@ namespace Phwoolcon\Auth;
 use Phalcon\Di;
 use Phalcon\Events\Event;
 use Phalcon\Security;
-use Phwoolcon\Auth\Adapter\Exception;
 use Phwoolcon\Auth\Adapter\Generic;
 use Phwoolcon\Config;
 use Phwoolcon\Events;
+use Phwoolcon\Exception\InvalidConfigException as Exception;
 
 class Auth
 {
