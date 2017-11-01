@@ -54,6 +54,25 @@ class Auth
         return static::$instance->getUser();
     }
 
+    public static function ideHelperGenerator()
+    {
+        $class = get_class(static::$di->getShared('auth'));
+        return str_replace('%class%', $class, '
+    /**
+     * @var %class%
+     */
+    protected static $instance;
+
+    /**
+     * @return %class%
+     */
+    public static function getInstance()
+    {
+        return parent::getInstance();
+    }');
+
+    }
+
     public static function register(Di $di)
     {
         static::$di = $di;
