@@ -5,6 +5,7 @@ namespace Phwoolcon\Auth;
 use Phalcon\Di;
 use Phalcon\Security;
 use Phwoolcon\Auth\Adapter\Exception;
+use Phwoolcon\Auth\Model\UserCheckStatusInterface;
 use Phwoolcon\Cache;
 use Phwoolcon\Cookies;
 use Phwoolcon\Log;
@@ -67,6 +68,31 @@ trait AdapterTrait
 
     public function changePassword($password, $originPassword = null)
     {
+    }
+
+    public function checkLoginCredential(array $credential)
+    {
+        if (empty($credential['login']) || empty($credential['password'])) {
+            throw new Exception(
+                __($this->options['hints']['invalid_user_credential']),
+                Exception::CODE_INVALID_USER_CREDENTIAL
+            );
+        }
+        if (!$user = $this->findUser($credential)) {
+            throw new Exception(
+                __($this->options['hints']['invalid_user_credential']),
+                Exception::CODE_INVALID_USER_CREDENTIAL
+            );
+        }
+        if (!$this->hasher->checkHash($credential['password'],
+            $user->getData($this->options['user_fields']['password_field']))) {
+            throw new Exception(
+                __($this->options['hints']['invalid_password']),
+                Exception::CODE_INVALID_PASSWORD
+            );
+        }
+        $user instanceof UserCheckStatusInterface and $user->checkStatus();
+        return $user;
     }
 
     protected function checkRegisterCredential(array $credential)
@@ -151,28 +177,7 @@ trait AdapterTrait
 
     public function login(array $credential)
     {
-        if (empty($credential['login']) || empty($credential['password'])) {
-            throw new Exception(
-                __($this->options['hints']['invalid_user_credential']),
-                Exception::CODE_INVALID_USER_CREDENTIAL
-            );
-        }
-        if (!$user = $this->findUser($credential)) {
-            throw new Exception(
-                __($this->options['hints']['invalid_user_credential']),
-                Exception::CODE_INVALID_USER_CREDENTIAL
-            );
-        }
-        if (!$this->hasher->checkHash($credential['password'],
-            $user->getData($this->options['user_fields']['password_field']))) {
-            throw new Exception(
-                __($this->options['hints']['invalid_password']),
-                Exception::CODE_INVALID_PASSWORD
-            );
-        }
-        if (method_exists($user, 'checkStatus')) {
-            $user->checkStatus();
-        }
+        $user = $this->checkLoginCredential($credential);
         if (!empty($credential['remember']) && method_exists($user, 'setRememberToken')) {
             $rememberToken = Text::token() . $user->getId();
             $user->setRememberToken($rememberToken);
