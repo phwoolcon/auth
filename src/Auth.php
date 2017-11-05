@@ -56,6 +56,9 @@ class Auth
 
     public static function ideHelperGenerator()
     {
+        if (!static::$di) {
+            return '';
+        }
         $class = get_class(static::$di->getShared('auth'));
         return str_replace('%class%', $class, '
     /**
