@@ -9,5 +9,10 @@ return [
                 'Auth' => 'Phwoolcon\Auth\Auth',
             ],
         ],
+        'assets' => [
+            'sso-js'      => [
+                'phwoolcon-auth/sso.min.js',
+            ],
+        ],
     ],
 ];
