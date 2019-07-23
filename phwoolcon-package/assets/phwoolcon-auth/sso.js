@@ -65,6 +65,7 @@
                 notifyForm.appendChild(notifyField);
                 notifyForm.notifyField = notifyField;
                 body.appendChild(notifyForm);
+                sso.check();
             }
         },
         setOptions: function (ssoOptions) {
@@ -247,6 +248,6 @@
         throw new Error("Please include JSON support script to your page.");
     }
     _listen(w, "load", function () {
-        sso.init();
+        sso.init(w.$ssoOptions);
     });
 }(window, document);
