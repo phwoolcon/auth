@@ -5,30 +5,34 @@
         options: {
             ssoCheckUri: "sso/check",
             ssoServerCheckUri: "sso/server-check",
+            ssoServerGetUid: "sso/uid",
             baseUrl: "/"
         }
     });
 
-    var initialized, body, cIframe, sIframe, clientWindow, serverWindow, notifyForm, msgTargetOrigin, timerServerCheck;
-    var options = {
-            ssoServer: $p.options.baseUrl,
-            ssoCheckUri: $p.options.ssoCheckUri,
-            ssoServerCheckUri: $p.options.ssoServerCheckUri,
-            initToken: "",
-            initTime: 0,
-            notifyUrl: "",
-            debug: false
-        }, ssoClientNotifyIframeName = "_sso_client_iframe_" + (+new Date),
-        vars = {};
-    var simpleStorage = w.simpleStorage || {
+    var undefined, sso, options, simpleStorage, initialized, body, cIframe, sIframe, clientWindow, serverWindow,
+        notifyForm, msgTargetOrigin, timerServerCheck, vars = {}, console = w.console, JSON = w.JSON, fetch = w.fetch,
+        localStorage = w.localStorage, debugTag = $p.options.isSsoServer ? "[Server]" : "[Client]",
+        ssoClientNotifyIframeName = "_sso_client_iframe_" + (+new Date);
+    options = {
+        ssoServer: $p.options.baseUrl,
+        ssoCheckUri: $p.options.ssoCheckUri,
+        ssoServerCheckUri: $p.options.ssoServerCheckUri,
+        ssoServerGetUid: $p.options.ssoServerGetUid,
+        initToken: "",
+        initTime: 0,
+        notifyUrl: "",
+        debug: false
+    };
+    simpleStorage = w.simpleStorage || {
         get: function (key) {
-            return w.localStorage ? _getJson(w.localStorage.getItem("_sso_" + key)) : false;
+            return _getJson(localStorage.getItem("_sso_" + key));
         },
         set: function (key, value) {
-            return w.localStorage ? w.localStorage.setItem("_sso_" + key, _jsonStringify(value)) : false;
+            return localStorage.setItem("_sso_" + key, _jsonStringify(value));
         }
     };
-    var sso = w.$p.sso = {
+    sso = w.$p.sso = {
         options: options,
         init: function (ssoOptions) {
             sso.setOptions(ssoOptions);
@@ -77,9 +81,6 @@
             return sso;
         },
         check: function () {
-            if (!initialized) {
-                throw new Error("Please invoke $p.sso.init() first.");
-            }
             _debug("Start checking");
             var clientUid = sso.getUid(),
                 message = {
@@ -107,11 +108,11 @@
             _sendMsgTo(serverWindow, {stopCheck: true});
         },
         getUid: function () {
-            return simpleStorage && simpleStorage.get("uid");
+            return simpleStorage.get("uid");
         },
         setUid: function (uid, ttl) {
             _debug("Set uid: " + uid);
-            simpleStorage && simpleStorage.set("uid", uid, {TTL: ttl || 0});
+            simpleStorage.set("uid", uid, {TTL: ttl || 0});
         }
     };
 
@@ -146,21 +147,19 @@
     }
 
     function _debug(info) {
-        w.console && options.debug && (w.console.trace ? w.console.trace(info) : w.console.log(info));
+        console && (console.debug ? console.debug(debugTag, info) : console.log(debugTag, info));
     }
 
     function _getJson(data) {
-        var jsonData;
         try {
-            jsonData = w.JSON.parse(data);
-            return jsonData;
+            return JSON.parse(data);
         } catch (E) {
             return data;
         }
     }
 
     function _jsonStringify(obj) {
-        return w.JSON.stringify(obj);
+        return JSON.stringify(obj);
     }
 
     function _listen(host, eventName, callback) {
@@ -178,11 +177,52 @@
     function _serverCheck() {
         var clientUid = vars.clientUid,
             serverUid = sso.getUid();
+
+        /**
+         * @param {Response} response
+         * @returns {Response}
+         */
+        function _checkStatus(response) {
+            if (response.status >= 200 && response.status < 300) {
+                return response
+            } else {
+                var error = new Error(response.statusText);
+                error.response = response;
+                throw error;
+            }
+        }
+
+        /**
+         *
+         * @param {Response} response
+         * @returns {any}
+         */
+        function _parseJSON(response) {
+            return response.json()
+        }
+
         clientWindow = w.parent;
+        if (serverUid === undefined) {
+            _debug("Clarifying uid...");
+            fetch(options.ssoServer + options.ssoServerGetUid, {
+                credentials: "same-origin"
+            }).then(_checkStatus).then(_parseJSON).then(function (data) {
+                _debug(data);
+                sso.setUid(data.uid, data.uidTtl * 1000);
+                _serverCheck();
+            }).catch(function (error) {
+                _debug("Request failed:");
+                _debug(error);
+                timerServerCheck = setTimeout(function () {
+                    _serverCheck();
+                }, 60000);
+            });
+            return;
+        }
         timerServerCheck = setTimeout(function () {
-            _serverCheck.apply(sso);
+            _serverCheck();
         }, 1000);
-        if (clientUid == serverUid) {
+        if (clientUid === serverUid) {
             return;
         }
         _debug("Server uid: " + serverUid);
@@ -191,27 +231,18 @@
             _debug("Login: " + serverUid);
             fetch(options.ssoServer + options.ssoServerCheckUri, {
                 method: "POST",
+                credentials: "same-origin",
                 body: $p.jsonToFormData({
                     notifyUrl: options.notifyUrl,
                     initTime: options.initTime,
                     initToken: options.initToken
                 })
-            }).then(function checkStatus(response) {
-                if (response.status >= 200 && response.status < 300) {
-                    return response
-                } else {
-                    var error = new Error(response.statusText);
-                    error.response = response;
-                    throw error;
-                }
-            }).then(function parseJSON(response) {
-                return response.json()
-            }).then(function (data) {
+            }).then(_checkStatus).then(_parseJSON).then(function (data) {
                 vars.clientUid = serverUid;
                 _debug(data);
                 _sendMsgTo(clientWindow, {login: data["user_data"]});
             }).catch(function (error) {
-                _debug('Request failed:');
+                _debug("Request failed:");
                 _debug(error);
             });
             _sendMsgTo(clientWindow, {setUid: serverUid});
@@ -223,29 +254,33 @@
         }
     }
 
+    function _stopServerCheck() {
+        clearTimeout(timerServerCheck);
+    }
+
     function _serverOnMessage(e) {
-        var data = _getJson(e.data),
-            clientUid,
-            setOptions;
-        if (setOptions = data.setOptions) {
+        var instructions = _getJson(e.data),
+            clientUid = instructions.clientUid,
+            setOptions = instructions.setOptions;
+        if (setOptions) {
             sso.setOptions(setOptions);
         }
         _debug("Handle in iframe");
-        if (clientUid = data.clientUid) {
+        if (clientUid) {
             _debug("Aware client uid: " + clientUid);
             vars.clientUid = clientUid;
         }
-        if (data.check) {
-            _serverCheck.apply(sso);
+        if (instructions.check) {
+            _serverCheck();
         }
-        if (data.stopCheck) {
+        if (instructions.stopCheck) {
             _debug("Stop checking");
-            clearTimeout(timerServerCheck);
+            _stopServerCheck();
         }
     }
 
-    if (!w.JSON) {
-        throw new Error("Please include JSON support script to your page.");
+    if (!JSON || !fetch || !localStorage) {
+        throw new Error("Please include `JSON`, `fetch` and `localStorage` polyfill scripts to your page.");
     }
     _listen(w, "load", function () {
         sso.init(w.$ssoOptions);
