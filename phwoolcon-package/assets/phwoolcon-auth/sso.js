@@ -147,7 +147,11 @@
     }
 
     function _debug(info) {
-        console && (console.debug ? console.debug(debugTag, info) : console.log(debugTag, info));
+        options.debug && console && (console.debug ? console.debug(debugTag, info) : console.log(debugTag, info));
+    }
+
+    function _error(error) {
+        console && (console.error ? console.error(debugTag, error) : console.log(debugTag, error))
     }
 
     function _getJson(data) {
@@ -201,6 +205,10 @@
             return response.json()
         }
 
+        function _autoCheck(interval) {
+            timerServerCheck = setTimeout(_serverCheck, interval);
+        }
+
         clientWindow = w.parent;
         if (serverUid === undefined) {
             _debug("Clarifying uid...");
@@ -212,22 +220,19 @@
                 _serverCheck();
             }).catch(function (error) {
                 _debug("Request failed:");
-                _debug(error);
-                timerServerCheck = setTimeout(function () {
-                    _serverCheck();
-                }, 60000);
+                _error(error);
+                _autoCheck(60000)
             });
             return;
         }
-        timerServerCheck = setTimeout(function () {
-            _serverCheck();
-        }, 1000);
+        _autoCheck(1000);
         if (clientUid === serverUid) {
             return;
         }
         _debug("Server uid: " + serverUid);
         if (serverUid) {
             // Login
+            _stopServerCheck();
             _debug("Login: " + serverUid);
             fetch(options.ssoServer + options.ssoServerCheckUri, {
                 method: "POST",
@@ -238,12 +243,20 @@
                     initToken: options.initToken
                 })
             }).then(_checkStatus).then(_parseJSON).then(function (data) {
-                vars.clientUid = serverUid;
+                var userData = data["user_data"];
                 _debug(data);
-                _sendMsgTo(clientWindow, {login: data["user_data"]});
+                if (userData) {
+                    _sendMsgTo(clientWindow, {login: userData});
+                } else {
+                    sso.setUid(serverUid = null);
+                    _sendMsgTo(clientWindow, {logout: true});
+                }
+                vars.clientUid = serverUid;
+                _autoCheck(1000);
             }).catch(function (error) {
                 _debug("Request failed:");
-                _debug(error);
+                _error(error);
+                _autoCheck(60000);
             });
             _sendMsgTo(clientWindow, {setUid: serverUid});
         } else {

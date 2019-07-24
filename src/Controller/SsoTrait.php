@@ -25,8 +25,7 @@ trait SsoTrait
         unset($ssoData['user'], $ssoData['site']);
         $userData = $ssoData['user_data'];
         $key = fnGet($site, 'site_secret');
-        $userData['sign'] = Security::signArrayHmacSha256($userData, $key);
-        $ssoData['user_data'] = Crypt::opensslEncrypt(json_encode($userData), $key);
+        $userData === '' or $ssoData['user_data'] = Crypt::opensslEncrypt(json_encode($userData), $key);
         return $ssoData;
     }
 
@@ -40,7 +39,7 @@ trait SsoTrait
                 return ['error' => __('Invalid SSO init token')];
             }
             if (!$user = Auth::getUser()) {
-                return ['error' => false, 'user_data' => ['uid' => null]];
+                return ['error' => false, 'user_data' => '', 'site' => $site];
             }
             $ssoData = [
                 'error' => false,
