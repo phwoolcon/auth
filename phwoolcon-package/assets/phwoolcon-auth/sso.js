@@ -1,4 +1,5 @@
 /*! phwoolcon sso.js v1.0-dev https://github.com/phwoolcon/auth | Apache-2.0 */
+/* Compressor https://skalman.github.io/UglifyJS-online/ */
 /* SSO api */
 !function (w, d) {
     w.$p || (w.$p = {
@@ -21,6 +22,7 @@
         ssoServerGetUid: $p.options.ssoServerGetUid,
         initToken: "",
         initTime: 0,
+        loggedIn: null,
         notifyUrl: "",
         debug: false
     };
@@ -47,6 +49,10 @@
                     _serverOnMessage.apply(sso, [e]);
                 });
             } else {
+                // Reset client uid if the init state does not match localStorage
+                if ((options.loggedIn && !sso.getUid()) || (options.loggedIn === false && sso.getUid())) {
+                    sso.setUid(undefined)
+                }
                 msgTargetOrigin = options.ssoServer;
                 _listen(w, "message", function (e) {
                     _clientOnMessage.apply(sso, [e]);
